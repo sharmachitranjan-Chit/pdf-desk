@@ -15,4 +15,6 @@
     <color name="doc_icon">#C58F24</color>     <!-- file-row glyph -->
     <color name="selection">#33E0A62E</color>  <!-- page selection overlay -->
     <color name="canvas">#2A2E35</color>       <!-- reader/annotate gutter -->
+    <color name="tile_amber">#F6E7C6</color>   <!-- home action tile (primary) -->
+    <color name="tile_neutral">#E9EBEF</color> <!-- home action tile (secondary) -->       <!-- reader/annotate gutter -->
 </resources>

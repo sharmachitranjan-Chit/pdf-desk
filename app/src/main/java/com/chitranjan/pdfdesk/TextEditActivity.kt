@@ -241,13 +241,32 @@ class TextRunOverlayView @JvmOverloads constructor(
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_UP) {
-            // Small slop so thin runs are still tappable.
-            val slop = 8f
-            val hit = boxes.indexOfFirst {
-                RectF(it.left - slop, it.top - slop, it.right + slop, it.bottom + slop)
-                    .contains(event.x, event.y)
+            val x = event.x; val y = event.y
+            val slop = 10f
+            // 1) Of all boxes containing the tap, pick the SMALLEST — so a tight
+            //    run wins over any larger overlapping one.
+            var best = -1
+            var bestArea = Float.MAX_VALUE
+            boxes.forEachIndexed { i, r ->
+                if (x >= r.left - slop && x <= r.right + slop &&
+                    y >= r.top - slop && y <= r.bottom + slop) {
+                    val area = r.width() * r.height()
+                    if (area < bestArea) { bestArea = area; best = i }
+                }
             }
-            if (hit >= 0) { onRunTapped?.invoke(hit); performClick() }
+            // 2) Nothing contains it → nearest box within reach, so a slightly
+            //    misplaced box doesn't make its line uneditable.
+            if (best < 0) {
+                val reach = 28f * resources.displayMetrics.density
+                var bestDist = reach
+                boxes.forEachIndexed { i, r ->
+                    val dx = when { x < r.left -> r.left - x; x > r.right -> x - r.right; else -> 0f }
+                    val dy = when { y < r.top -> r.top - y; y > r.bottom -> y - r.bottom; else -> 0f }
+                    val d = kotlin.math.hypot(dx, dy)
+                    if (d < bestDist) { bestDist = d; best = i }
+                }
+            }
+            if (best >= 0) { onRunTapped?.invoke(best); performClick() }
         }
         return true
     }

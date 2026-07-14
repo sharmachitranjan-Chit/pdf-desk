@@ -57,4 +57,16 @@ object FileUtils {
         if (!name.lowercase().endsWith(".pdf")) name = "$name.pdf"
         return name
     }
+
+    fun querySize(ctx: Context, uri: Uri): Long {
+        var size = 0L
+        try {
+            ctx.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                val idx = c.getColumnIndex(OpenableColumns.SIZE)
+                if (idx >= 0 && c.moveToFirst() && !c.isNull(idx)) size = c.getLong(idx)
+            }
+        } catch (_: Exception) {
+        }
+        return size
+    }
 }

@@ -53,7 +53,7 @@ class ReaderActivity : AppCompatActivity() {
             if (!FileUtils.copyUriToWorking(this, uri)) {
                 toast("Couldn't open this PDF."); finish(); return
             }
-            RecentStore.add(this, uri.toString(), title0)
+            RecentStore.add(this, uri.toString(), title0, FileUtils.querySize(this, uri))
         } else {
             title0 = intent.getStringExtra("title") ?: "PDF Desk"
         }

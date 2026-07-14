@@ -2,8 +2,11 @@ package com.chitranjan.pdfdesk
 
 import android.content.Context
 
-/** A tiny "recent files" list persisted in SharedPreferences. */
-data class RecentEntry(val uri: String, val name: String)
+/**
+ * A tiny "recent files" list persisted in SharedPreferences.
+ * Rows are uri|name|time|size; old two-field rows still parse (time/size 0).
+ */
+data class RecentEntry(val uri: String, val name: String, val time: Long = 0L, val size: Long = 0L)
 
 object RecentStore {
     private const val PREF = "pdfdesk_recent"
@@ -16,16 +19,19 @@ object RecentStore {
         val raw = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString(KEY, "") ?: ""
         if (raw.isEmpty()) return emptyList()
         return raw.split(ROW).mapNotNull {
-            val parts = it.split(SEP)
-            if (parts.size == 2) RecentEntry(parts[0], parts[1]) else null
+            val p = it.split(SEP)
+            when {
+                p.size >= 4 -> RecentEntry(p[0], p[1], p[2].toLongOrNull() ?: 0L, p[3].toLongOrNull() ?: 0L)
+                p.size == 2 -> RecentEntry(p[0], p[1])
+                else -> null
+            }
         }
     }
 
-    fun add(ctx: Context, uri: String, name: String) {
+    fun add(ctx: Context, uri: String, name: String, size: Long = 0L) {
         val current = get(ctx).filter { it.uri != uri }.toMutableList()
-        current.add(0, RecentEntry(uri, name))
-        val trimmed = current.take(MAX)
-        val raw = trimmed.joinToString(ROW) { "${it.uri}$SEP${it.name}" }
+        current.add(0, RecentEntry(uri, name, System.currentTimeMillis(), size))
+        val raw = current.take(MAX).joinToString(ROW) { "${it.uri}$SEP${it.name}$SEP${it.time}$SEP${it.size}" }
         ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString(KEY, raw).apply()
     }
 }
