@@ -9,7 +9,10 @@ import com.tom_roush.pdfbox.pdmodel.graphics.blend.BlendMode
 import com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor
 import com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB
 import com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
+import com.tom_roush.pdfbox.pdmodel.font.PDType0Font
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationText
+import com.tom_roush.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.text.TextPosition
 import java.io.File
 
 /** Geometry of a single page, in PDF points (1/72 inch). */
@@ -230,5 +233,170 @@ object PdfEditor {
             tmp.copyTo(work, overwrite = true)
             tmp.delete()
         }
+    }
+
+    // ---------- Phase 2: in-place text editing (unrotated pages only) ----------
+
+    /**
+     * One editable run of text on a line. All geometry is in absolute PDF
+     * user-space points (bottom-left origin, y up), same space toPdf outputs.
+     */
+    data class TextRun(
+        val text: String,
+        val x: Float,          // left edge
+        val baselineY: Float,  // text baseline
+        val width: Float,      // advance width of the whole run
+        val fontSizePt: Float, // dominant font size
+        val serif: Boolean     // dominant font style flag
+    ) {
+        // Cover box: generous ascent/descent around the baseline.
+        val boxX: Float get() = x
+        val boxY: Float get() = baselineY - fontSizePt * 0.28f
+        val boxW: Float get() = width
+        val boxH: Float get() = fontSizePt * 1.24f
+    }
+
+    /**
+     * Detect text runs on one page. Returns empty if the page has no text
+     * layer (i.e. it's a scan). Only meaningful for rotation == 0 pages —
+     * callers must gate on that.
+     */
+    fun detectTextRuns(work: File, pageIndex: Int): List<TextRun> {
+        val doc = PDDocument.load(work)
+        try {
+            val g = geomOf(doc.getPage(pageIndex))
+            val collected = ArrayList<TextPosition>()
+            val stripper = object : PDFTextStripper() {
+                override fun processTextPosition(tp: TextPosition) {
+                    collected.add(tp)
+                    super.processTextPosition(tp)
+                }
+            }
+            stripper.startPage = pageIndex + 1
+            stripper.endPage = pageIndex + 1
+            stripper.getText(doc)  // drives processTextPosition
+            if (collected.isEmpty()) return emptyList()
+
+            // Convert to PDF user space and group into baselines.
+            data class Glyph(val ch: String, val x: Float, val y: Float, val w: Float, val size: Float, val serif: Boolean)
+            val glyphs = collected.mapNotNull { tp ->
+                val ch = tp.unicode ?: return@mapNotNull null
+                if (ch.isEmpty()) return@mapNotNull null
+                val size = if (tp.fontSizeInPt > 0f) tp.fontSizeInPt else tp.fontSize
+                val serif = runCatching {
+                    val d = tp.font?.fontDescriptor
+                    (d?.isSerif == true) || (tp.font?.name ?: "").let {
+                        it.contains("Times", true) || it.contains("Serif", true) ||
+                        it.contains("Georgia", true) || it.contains("Roman", true)
+                    }
+                }.getOrDefault(false)
+                Glyph(
+                    ch = ch,
+                    x = g.cropLLX + tp.xDirAdj,
+                    y = g.cropLLY + g.cropH - tp.yDirAdj,   // baseline, y-up
+                    w = tp.widthDirAdj,
+                    size = size,
+                    serif = serif
+                )
+            }
+            if (glyphs.isEmpty()) return emptyList()
+
+            // Group by baseline (tolerance scales with font size), then split
+            // each line into runs wherever a horizontal gap is clearly wider
+            // than a space.
+            val lines = ArrayList<MutableList<Glyph>>()
+            glyphs.sortedWith(compareByDescending<Glyph> { it.y }.thenBy { it.x }).forEach { gl ->
+                val line = lines.lastOrNull()
+                val tol = maxOf(2f, gl.size * 0.3f)
+                if (line != null && kotlin.math.abs(line.last().y - gl.y) <= tol) line.add(gl)
+                else lines.add(mutableListOf(gl))
+            }
+
+            val runs = ArrayList<TextRun>()
+            lines.forEach { line ->
+                line.sortBy { it.x }
+                var start = 0
+                for (i in 1..line.size) {
+                    val breakHere = i == line.size || run {
+                        val prev = line[i - 1]
+                        val gap = line[i].x - (prev.x + prev.w)
+                        gap > maxOf(prev.size, line[i].size) * 1.1f
+                    }
+                    if (breakHere) {
+                        val seg = line.subList(start, i)
+                        val text = seg.joinToString("") { it.ch }
+                        if (text.isNotBlank()) {
+                            val x0 = seg.first().x
+                            val x1 = seg.last().x + seg.last().w
+                            val size = seg.groupBy { it.size }.maxByOrNull { it.value.size }!!.key
+                            val serifCount = seg.count { it.serif }
+                            runs.add(
+                                TextRun(
+                                    text = text.trim(),
+                                    x = x0,
+                                    baselineY = seg.map { it.y }.average().toFloat(),
+                                    width = x1 - x0,
+                                    fontSizePt = size,
+                                    serif = serifCount * 2 >= seg.size
+                                )
+                            )
+                        }
+                        start = i
+                    }
+                }
+            }
+            return runs
+        } finally { doc.close() }
+    }
+
+    /**
+     * Replace one run: cover the original with a bg-matched rect, then draw
+     * newText at the same left edge + baseline with the bundled font.
+     * Shrinks the font size to fit the original box when newText is longer.
+     * bg* are 0..1 sRGB sampled from the rendered page around the run.
+     */
+    fun editTextRun(
+        work: File, tmp: File, pageIndex: Int,
+        run: TextRun, newText: String,
+        fontBytes: java.io.InputStream,
+        bgR: Float, bgG: Float, bgB: Float
+    ) {
+        val doc = PDDocument.load(work)
+        try {
+            val page = doc.getPage(pageIndex)
+            val font = PDType0Font.load(doc, fontBytes)
+
+            var size = run.fontSizePt
+            if (newText.isNotEmpty()) {
+                val natural = font.getStringWidth(newText) / 1000f * size
+                if (natural > run.width && natural > 0f) {
+                    size = maxOf(5f, size * (run.width / natural))
+                }
+            }
+
+            val cs = PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true)
+            val gs = PDExtendedGraphicsState()
+            gs.nonStrokingAlphaConstant = 1f
+            gs.blendMode = BlendMode.NORMAL
+            cs.setGraphicsStateParameters(gs)
+
+            // Cover the original run (pad ~1pt each side against antialiased fringes).
+            cs.setNonStrokingColor(bgR, bgG, bgB)
+            cs.addRect(run.boxX - 1f, run.boxY - 1f, run.boxW + 2f, run.boxH + 2f)
+            cs.fill()
+
+            // Redraw.
+            if (newText.isNotEmpty()) {
+                cs.setNonStrokingColor(0f, 0f, 0f)
+                cs.beginText()
+                cs.setFont(font, size)
+                cs.newLineAtOffset(run.x, run.baselineY)
+                cs.showText(newText)
+                cs.endText()
+            }
+            cs.close()
+            doc.save(tmp)
+        } finally { doc.close() }
+        replace(work, tmp)
     }
 }

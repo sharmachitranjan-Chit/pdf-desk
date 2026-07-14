@@ -92,11 +92,12 @@ class ReaderActivity : AppCompatActivity() {
         m.clear()
         m.add(0, 1, 0, "Pages")
         m.add(0, 2, 1, "Annotate this page")
-        m.add(0, 3, 2, "Go to page")
-        m.add(0, 4, 3, "Night mode")
-        m.add(0, 5, 4, "Merge another PDF")
-        m.add(0, 6, 5, "Save / Export")
-        m.add(0, 7, 6, "Share")
+        m.add(0, 8, 2, "Edit text on this page")
+        m.add(0, 3, 3, "Go to page")
+        m.add(0, 4, 4, "Night mode")
+        m.add(0, 5, 5, "Merge another PDF")
+        m.add(0, 6, 6, "Save / Export")
+        m.add(0, 7, 7, "Share")
         toolbar.setOnMenuItemClickListener { onMenu(it) }
     }
 
@@ -106,6 +107,10 @@ class ReaderActivity : AppCompatActivity() {
             2 -> {
                 needsReload = true
                 startActivity(Intent(this, AnnotateActivity::class.java).putExtra("page", currentPage))
+            }
+            8 -> {
+                needsReload = true
+                startActivity(Intent(this, TextEditActivity::class.java).putExtra("page", currentPage))
             }
             3 -> goToPageDialog()
             4 -> { night = !night; load(currentPage); toast(if (night) "Night mode on" else "Night mode off") }
