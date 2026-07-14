@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="moss">#47563A</color>
+    <color name="moss_dark">#37452D</color>
+    <color name="cream">#F4EFE3</color>
+    <color name="surface">#FBF8F0</color>
+    <color name="amber">#D8A43C</color>
+    <color name="ink">#2E2A22</color>
+    <color name="muted">#7A7566</color>
+    <color name="selection">#33D8A43C</color>
+</resources>

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">PDF Desk</string>
+    <string name="byline">A tool made by Chitranjan Sharma</string>
+    <string name="open_pdf">Open PDF</string>
+    <string name="recent">Recent files</string>
+    <string name="no_recent">No recent files yet. Tap Open PDF to begin.</string>
+</resources>

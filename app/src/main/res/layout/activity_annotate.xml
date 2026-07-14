@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#444444">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/moss"
+        app:title="Annotate"
+        app:titleTextColor="@color/cream"
+        app:navigationIcon="@android:drawable/ic_menu_revert" />
+
+    <FrameLayout
+        android:id="@+id/annotContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <ImageView
+            android:id="@+id/imgPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:contentDescription="page" />
+        <com.chitranjan.pdfdesk.AnnotationOverlayView
+            android:id="@+id/overlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/moss"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="6dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnHl"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Highlight"
+            android:textColor="@color/cream"
+            android:textSize="12sp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDraw"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Draw"
+            android:textColor="@color/cream"
+            android:textSize="12sp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNote"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Note"
+            android:textColor="@color/cream"
+            android:textSize="12sp" />
+
+        <View android:layout_width="1dp" android:layout_height="28dp"
+            android:layout_marginStart="4dp" android:layout_marginEnd="4dp"
+            android:background="#66FFFFFF" />
+
+        <View android:id="@+id/col1"
+            android:layout_width="30dp" android:layout_height="30dp"
+            android:layout_margin="3dp" android:background="#E23B3B" />
+        <View android:id="@+id/col2"
+            android:layout_width="30dp" android:layout_height="30dp"
+            android:layout_margin="3dp" android:background="#2D6CDF" />
+        <View android:id="@+id/col3"
+            android:layout_width="30dp" android:layout_height="30dp"
+            android:layout_margin="3dp" android:background="#2E2A22" />
+
+        <View android:layout_width="0dp" android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUndo"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Undo"
+            android:textColor="@color/amber"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>
