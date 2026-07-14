@@ -4,15 +4,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/cream">
+    android:background="@color/bg">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/moss"
+        android:background="@color/chrome"
+        android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar"
         app:title="@string/app_name"
-        app:titleTextColor="@color/cream" />
+        app:titleTextColor="@color/on_chrome" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnOpen"
@@ -23,19 +24,28 @@
         android:paddingBottom="16dp"
         android:text="@string/open_pdf"
         android:textSize="16sp"
-        app:backgroundTint="@color/amber"
-        android:textColor="@color/ink" />
+        android:textAllCaps="false"
+        android:textColor="@color/accent_ink"
+        app:backgroundTint="@color/accent"
+        app:cornerRadius="12dp"
+        app:icon="@drawable/ic_open"
+        app:iconGravity="textStart"
+        app:iconPadding="10dp"
+        app:iconTint="@color/accent_ink" />
 
     <TextView
         android:id="@+id/lblRecent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
+        android:layout_marginStart="22dp"
         android:layout_marginEnd="20dp"
+        android:layout_marginBottom="2dp"
         android:text="@string/recent"
-        android:textColor="@color/moss"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:textColor="@color/muted"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textAllCaps="true"
+        android:letterSpacing="0.06" />
 
     <TextView
         android:id="@+id/tvEmpty"
@@ -50,8 +60,9 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="12dp" />
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:clipToPadding="false" />
 
     <TextView
         android:layout_width="match_parent"

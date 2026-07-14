@@ -2,16 +2,49 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="16dp"
+    android:orientation="vertical"
     android:background="?android:attr/selectableItemBackground">
-    <TextView
-        android:id="@+id/tvName"
-        android:layout_width="0dp"
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textColor="@color/ink"
-        android:textSize="15sp"
-        android:maxLines="1"
-        android:ellipsize="middle" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="13dp"
+        android:paddingBottom="13dp">
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_doc_badge"
+            android:padding="8dp"
+            android:src="@drawable/ic_doc"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/tvName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:textColor="@color/text"
+            android:textSize="15sp"
+            android:maxLines="1"
+            android:ellipsize="middle" />
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_chevron"
+            android:contentDescription="@null" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="62dp"
+        android:background="@color/divider" />
 </LinearLayout>

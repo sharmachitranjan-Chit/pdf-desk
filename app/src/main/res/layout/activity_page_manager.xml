@@ -4,15 +4,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/cream">
+    android:background="@color/bg">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/moss"
+        android:background="@color/chrome"
+        android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar"
         app:title="Manage pages"
-        app:titleTextColor="@color/cream"
+        app:titleTextColor="@color/on_chrome"
         app:navigationIcon="@android:drawable/ic_menu_revert" />
 
     <TextView
@@ -31,6 +32,11 @@
         android:padding="6dp"
         android:clipToPadding="false" />
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider" />
+
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -47,42 +53,48 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Rotate ⟲"
-                android:textColor="@color/moss" />
+                android:textAllCaps="false"
+                android:textColor="@color/text" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRotateR"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Rotate ⟳"
-                android:textColor="@color/moss" />
+                android:textAllCaps="false"
+                android:textColor="@color/text" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDelete"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Delete"
-                android:textColor="@color/moss" />
+                android:textAllCaps="false"
+                android:textColor="@color/text" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnExtract"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Extract"
-                android:textColor="@color/moss" />
+                android:textAllCaps="false"
+                android:textColor="@color/text" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSplit"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Split here"
-                android:textColor="@color/moss" />
+                android:textAllCaps="false"
+                android:textColor="@color/text" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnMerge"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Merge PDF"
-                android:textColor="@color/moss" />
+                android:textAllCaps="false"
+                android:textColor="@color/text" />
         </LinearLayout>
     </HorizontalScrollView>
 </LinearLayout>

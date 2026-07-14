@@ -4,8 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="6dp"
+    app:cardBackgroundColor="@color/surface"
     app:cardElevation="2dp"
-    app:cardCornerRadius="6dp"
+    app:cardCornerRadius="8dp"
     app:strokeWidth="0dp">
 
     <FrameLayout
@@ -29,13 +30,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|center_horizontal"
-            android:background="@color/moss"
+            android:background="@color/chrome"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
             android:paddingTop="2dp"
             android:paddingBottom="2dp"
             android:text="1"
-            android:textColor="@color/cream"
+            android:textColor="@color/on_chrome"
             android:textSize="12sp" />
     </FrameLayout>
 </com.google.android.material.card.MaterialCardView>

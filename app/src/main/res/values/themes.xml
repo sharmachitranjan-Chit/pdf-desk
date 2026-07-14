@@ -1,15 +1,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.PDFDesk" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/moss</item>
-        <item name="colorPrimaryVariant">@color/moss_dark</item>
-        <item name="colorOnPrimary">@color/cream</item>
-        <item name="colorSecondary">@color/amber</item>
-        <item name="colorSecondaryVariant">@color/amber</item>
-        <item name="colorOnSecondary">@color/ink</item>
-        <item name="android:colorBackground">@color/cream</item>
+        <item name="colorPrimary">@color/chrome</item>
+        <item name="colorPrimaryVariant">@color/chrome_dark</item>
+        <item name="colorOnPrimary">@color/on_chrome</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSecondaryVariant">@color/accent</item>
+        <item name="colorOnSecondary">@color/accent_ink</item>
+        <item name="android:colorBackground">@color/bg</item>
         <item name="colorSurface">@color/surface</item>
-        <item name="colorOnSurface">@color/ink</item>
-        <item name="android:statusBarColor">@color/moss_dark</item>
-        <item name="android:windowBackground">@color/cream</item>
+        <item name="colorOnSurface">@color/text</item>
+        <item name="android:statusBarColor">@color/chrome_dark</item>
+        <item name="android:windowBackground">@color/bg</item>
     </style>
 </resources>
