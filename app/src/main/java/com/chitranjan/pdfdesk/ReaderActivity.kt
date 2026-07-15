@@ -15,12 +15,9 @@ import androidx.core.content.FileProvider
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
-import com.shockwave.pdfium.PdfPasswordException
-import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import android.graphics.Color
 import android.text.InputType
 import android.view.MenuItem
-import android.widget.EditText
 import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -121,7 +118,9 @@ class ReaderActivity : AppCompatActivity() {
                 tvPage.text = "${p + 1} / $count"
             }
             .onError { t ->
-                if (t is PdfPasswordException) promptPassword(false)
+                val name = t?.javaClass?.simpleName ?: ""
+                if (name.contains("Password", true) ||
+                    t?.message?.contains("password", true) == true) promptPassword(false)
                 else toast("Could not render this PDF.")
             }
             .load()
@@ -283,10 +282,13 @@ class ReaderActivity : AppCompatActivity() {
                             needsReload = false
                             load(currentPage)
                         }
-                    } catch (e: InvalidPasswordException) {
-                        runOnUiThread { promptPassword(true) }
                     } catch (e: Exception) {
-                        runOnUiThread { toast("Could not unlock this PDF."); finish() }
+                        val wrongPw = e.javaClass.simpleName.contains("InvalidPassword") ||
+                            e.message?.contains("password", true) == true
+                        runOnUiThread {
+                            if (wrongPw) promptPassword(true)
+                            else { toast("Could not unlock this PDF."); finish() }
+                        }
                     }
                 }.start()
             }
