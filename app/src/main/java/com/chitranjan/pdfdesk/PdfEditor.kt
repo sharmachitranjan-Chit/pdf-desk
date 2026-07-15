@@ -240,29 +240,32 @@ object PdfEditor {
     /**
      * One editable run of text on a line. All geometry is in absolute PDF
      * user-space points (bottom-left origin, y up), same space toPdf outputs.
+     * The cover box is carried explicitly, derived from MEASURED glyph
+     * heights — never from the font's declared size, which many PDFs
+     * (matrix-scaled text) report wildly wrong.
      */
     data class TextRun(
         val text: String,
         val x: Float,          // left edge
         val baselineY: Float,  // text baseline
         val width: Float,      // advance width of the whole run
-        val fontSizePt: Float, // dominant font size
+        val fontSizePt: Float, // sanity-checked size for redraw
         val serif: Boolean,    // dominant font style flag
-        val ascent: Float = 0f // measured glyph height above baseline (0 = unknown)
-    ) {
-        // Cover box: measured ascent when we have it, otherwise size-based guess.
-        val boxX: Float get() = x
-        val boxY: Float get() = baselineY - fontSizePt * 0.30f
-        val boxW: Float get() = width
-        val boxH: Float get() = (if (ascent > 0f) ascent else fontSizePt * 0.92f) + fontSizePt * 0.34f
-    }
+        val boxX: Float,       // cover rect (y-up)
+        val boxY: Float,
+        val boxW: Float,
+        val boxH: Float
+    )
 
     /**
      * Detect text runs on one page. Returns empty if the page has no text
      * layer (i.e. it's a scan). Only meaningful for rotation == 0 pages —
-     * callers must gate on that. v1 edits HORIZONTAL text only; rotated
-     * labels (sideways table headers etc.) are filtered out, otherwise
-     * their bounding boxes cover half the page and steal every tap.
+     * callers must gate on that. v1 edits HORIZONTAL text only.
+     *
+     * All grouping thresholds are driven by tp.heightDir (the measured
+     * glyph height), NOT fontSizeInPt: on matrix-scaled PDFs fontSizeInPt
+     * can be 10x reality, which merges whole columns into one tall run
+     * and floats every box off its line.
      */
     fun detectTextRuns(work: File, pageIndex: Int): List<TextRun> {
         val doc = PDDocument.load(work)
@@ -280,17 +283,13 @@ object PdfEditor {
             stripper.getText(doc)  // drives processTextPosition
             if (collected.isEmpty()) return emptyList()
 
-            // Convert to PDF user space and group into baselines.
             data class Glyph(val ch: String, val x: Float, val y: Float, val w: Float,
                              val h: Float, val size: Float, val serif: Boolean)
             val glyphs = collected.mapNotNull { tp ->
                 val ch = tp.unicode ?: return@mapNotNull null
                 if (ch.isEmpty()) return@mapNotNull null
-                // Horizontal text only in v1.
                 val dir = tp.dir
-                if (dir > 0.5f && dir < 359.5f) return@mapNotNull null
-                val size = if (tp.fontSizeInPt > 0f) tp.fontSizeInPt else tp.fontSize
-                if (size <= 0f) return@mapNotNull null
+                if (dir > 0.5f && dir < 359.5f) return@mapNotNull null  // horizontal only
                 val serif = runCatching {
                     val d = tp.font?.fontDescriptor
                     (d?.isSerif == true) || (tp.font?.name ?: "").let {
@@ -303,24 +302,28 @@ object PdfEditor {
                     x = g.cropLLX + tp.xDirAdj,
                     y = g.cropLLY + g.cropH - tp.yDirAdj,   // baseline, y-up
                     w = tp.widthDirAdj,
-                    h = tp.heightDir,                        // measured height above baseline
-                    size = size,
+                    h = tp.heightDir,                        // measured, trustworthy
+                    size = tp.fontSizeInPt,                  // NOT trustworthy — sanity-checked later
                     serif = serif
                 )
             }
             if (glyphs.isEmpty()) return emptyList()
 
-            // Group by baseline (tolerance scales with font size), then split
-            // each line into runs wherever a horizontal gap is clearly wider
-            // than word spacing (i.e. a table-column boundary).
+            // Typical glyph height on this page (median of measured heights).
+            val positiveH = glyphs.mapNotNull { if (it.h > 0.5f) it.h else null }.sorted()
+            val pageH = if (positiveH.isEmpty()) 7f else positiveH[positiveH.size / 2]
+
+            // ---- group into lines: tolerance from measured height ----
             val lines = ArrayList<MutableList<Glyph>>()
             glyphs.sortedWith(compareByDescending<Glyph> { it.y }.thenBy { it.x }).forEach { gl ->
                 val line = lines.lastOrNull()
-                val tol = maxOf(2f, gl.size * 0.3f)
-                if (line != null && kotlin.math.abs(line.last().y - gl.y) <= tol) line.add(gl)
+                val hRef = if (gl.h > 0.5f) gl.h else pageH
+                val tol = maxOf(2.5f, 0.42f * hRef)
+                if (line != null && kotlin.math.abs(line.first().y - gl.y) <= tol) line.add(gl)
                 else lines.add(mutableListOf(gl))
             }
 
+            // ---- split each line into runs at clear column gaps ----
             val runs = ArrayList<TextRun>()
             lines.forEach { line ->
                 line.sortBy { it.x }
@@ -328,29 +331,45 @@ object PdfEditor {
                 for (i in 1..line.size) {
                     val breakHere = i == line.size || run {
                         val prev = line[i - 1]
-                        val gap = line[i].x - (prev.x + prev.w)
-                        gap > maxOf(prev.size, line[i].size) * 1.45f
+                        val cur = line[i]
+                        val gap = cur.x - (prev.x + prev.w)
+                        val hLoc = maxOf(prev.h, cur.h, pageH * 0.8f)
+                        gap > maxOf(4f, 1.6f * hLoc)
                     }
                     if (breakHere) {
-                        val seg = line.subList(start, i)
-                        val text = seg.joinToString("") { it.ch }
-                        if (text.isNotBlank()) {
-                            val x0 = seg.first().x
-                            val x1 = seg.last().x + seg.last().w
-                            val size = seg.groupBy { it.size }.maxByOrNull { it.value.size }!!.key
-                            val measured = seg.maxOf { it.h }
-                            val serifCount = seg.count { it.serif }
-                            runs.add(
-                                TextRun(
-                                    text = text.trim(),
-                                    x = x0,
-                                    baselineY = seg.map { it.y }.average().toFloat(),
-                                    width = x1 - x0,
-                                    fontSizePt = size,
-                                    serif = serifCount * 2 >= seg.size,
-                                    ascent = if (measured > 0f) measured * 1.06f else 0f
+                        var seg = line.subList(start, i).toList()
+                        // trim blank glyphs off both ends so geometry hugs visible text
+                        seg = seg.dropWhile { it.ch.isBlank() }.dropLastWhile { it.ch.isBlank() }
+                        if (seg.isNotEmpty()) {
+                            val text = seg.joinToString("") { it.ch }
+                            if (text.isNotBlank()) {
+                                val x0 = seg.first().x
+                                val x1 = seg.last().x + seg.last().w
+                                val segH = seg.mapNotNull { if (it.h > 0.5f) it.h else null }
+                                val hMax = if (segH.isEmpty()) pageH else segH.max()
+                                val ys = seg.map { it.y }.sorted()
+                                val baseline = ys[ys.size / 2]
+                                // redraw size: trust fontSizeInPt only when plausible vs measured height
+                                val szs = seg.mapNotNull { if (it.size > 0.5f) it.size else null }.sorted()
+                                val szMed = if (szs.isEmpty()) 0f else szs[szs.size / 2]
+                                val size = if (szMed >= 0.9f * hMax && szMed <= 2.4f * hMax) szMed
+                                           else hMax / 0.72f
+                                val serifCount = seg.count { it.serif }
+                                runs.add(
+                                    TextRun(
+                                        text = text.trim(),
+                                        x = x0,
+                                        baselineY = baseline,
+                                        width = x1 - x0,
+                                        fontSizePt = size,
+                                        serif = serifCount * 2 >= seg.size,
+                                        boxX = x0,
+                                        boxY = baseline - hMax * 0.32f,
+                                        boxW = x1 - x0,
+                                        boxH = hMax * 1.42f
+                                    )
                                 )
-                            )
+                            }
                         }
                         start = i
                     }
