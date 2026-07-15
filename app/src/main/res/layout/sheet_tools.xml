@@ -29,6 +29,10 @@
     <View android:layout_width="match_parent" android:layout_height="1dp"
         android:layout_marginStart="20dp" android:layout_marginEnd="20dp"
         android:background="@color/divider"/>
+    <LinearLayout android:id="@+id/rowReadMode" style="@style/SheetRow">
+        <ImageView style="@style/SheetIcon" android:src="@drawable/ic_book" android:contentDescription="@null"/>
+        <TextView style="@style/SheetLabel" android:text="Reading mode (reflow text)"/>
+    </LinearLayout>
     <LinearLayout android:id="@+id/rowGoto" style="@style/SheetRow">
         <ImageView style="@style/SheetIcon" android:src="@drawable/ic_goto" android:contentDescription="@null"/>
         <TextView style="@style/SheetLabel" android:text="Go to page"/>
@@ -47,6 +51,10 @@
     <LinearLayout android:id="@+id/rowExport" style="@style/SheetRow">
         <ImageView style="@style/SheetIcon" android:src="@drawable/ic_export" android:contentDescription="@null"/>
         <TextView style="@style/SheetLabel" android:text="Save a copy"/>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rowOffice" style="@style/SheetRow">
+        <ImageView style="@style/SheetIcon" android:src="@drawable/ic_export" android:contentDescription="@null"/>
+        <TextView style="@style/SheetLabel" android:text="Export as Word / Excel / PPT"/>
     </LinearLayout>
     <LinearLayout android:id="@+id/rowShare" style="@style/SheetRow">
         <ImageView style="@style/SheetIcon" android:src="@drawable/ic_share" android:contentDescription="@null"/>

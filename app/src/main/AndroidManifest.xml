@@ -51,6 +51,10 @@
             android:name=".TextEditActivity"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
+        <activity
+            android:name=".ReaderModeActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

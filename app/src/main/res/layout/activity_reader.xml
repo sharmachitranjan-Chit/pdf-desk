@@ -11,7 +11,7 @@
         android:layout_height="?attr/actionBarSize"
         android:background="@color/chrome"
         app:titleTextColor="@color/on_chrome"
-        app:navigationIcon="@android:drawable/ic_menu_revert" />
+        app:navigationIcon="@drawable/ic_back" />
 
     <View
         android:layout_width="match_parent"

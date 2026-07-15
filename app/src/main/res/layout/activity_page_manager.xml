@@ -14,7 +14,7 @@
         app:popupTheme="@style/ThemeOverlay.MaterialComponents.Light"
         app:title="Manage pages"
         app:titleTextColor="@color/on_chrome"
-        app:navigationIcon="@android:drawable/ic_menu_revert" />
+        app:navigationIcon="@drawable/ic_back" />
 
     <TextView
         android:layout_width="match_parent"

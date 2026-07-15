@@ -268,8 +268,29 @@ object PdfEditor {
      * and floats every box off its line.
      */
     fun detectTextRuns(work: File, pageIndex: Int): List<TextRun> {
-        val doc = PDDocument.load(work)
-        try {
+        PDDocument.load(work).use { doc -> return linesOfRuns(doc, pageIndex).flatten() }
+    }
+
+    /** Per-page lines of cell texts (columns split at wide gaps) — for Office export. */
+    fun extractAllLines(work: File): List<List<List<String>>> {
+        PDDocument.load(work).use { doc ->
+            return (0 until doc.numberOfPages).map { p ->
+                try { linesOfRuns(doc, p).map { line -> line.map { it.text } } }
+                catch (e: Exception) { emptyList() }
+            }
+        }
+    }
+
+    /** Whole-document plain text, reading order — for reflow reading mode. */
+    fun extractText(work: File): String {
+        PDDocument.load(work).use { doc ->
+            val s = PDFTextStripper()
+            s.sortByPosition = true
+            return s.getText(doc)
+        }
+    }
+
+    private fun linesOfRuns(doc: PDDocument, pageIndex: Int): List<List<TextRun>> {
             val g = geomOf(doc.getPage(pageIndex))
             val collected = ArrayList<TextPosition>()
             val stripper = object : PDFTextStripper() {
@@ -281,7 +302,7 @@ object PdfEditor {
             stripper.startPage = pageIndex + 1
             stripper.endPage = pageIndex + 1
             stripper.getText(doc)  // drives processTextPosition
-            if (collected.isEmpty()) return emptyList()
+            if (collected.isEmpty()) return emptyList()   // no text layer
 
             data class Glyph(val ch: String, val x: Float, val y: Float, val w: Float,
                              val h: Float, val size: Float, val serif: Boolean)
@@ -324,8 +345,9 @@ object PdfEditor {
             }
 
             // ---- split each line into runs at clear column gaps ----
-            val runs = ArrayList<TextRun>()
+            val out = ArrayList<List<TextRun>>()
             lines.forEach { line ->
+                val runs = ArrayList<TextRun>()
                 line.sortBy { it.x }
                 var start = 0
                 for (i in 1..line.size) {
@@ -374,9 +396,9 @@ object PdfEditor {
                         start = i
                     }
                 }
+                if (runs.isNotEmpty()) out.add(runs)
             }
-            return runs
-        } finally { doc.close() }
+            return out
     }
 
     /**
