@@ -15,6 +15,13 @@ import androidx.core.content.FileProvider
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
+import com.shockwave.pdfium.PdfPasswordException
+import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
+import android.graphics.Color
+import android.text.InputType
+import android.view.MenuItem
+import android.widget.EditText
+import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.io.File
@@ -25,7 +32,7 @@ class ReaderActivity : AppCompatActivity() {
     private lateinit var tvPage: TextView
     private var currentPage = 0
     private var pageCount = 0
-    private var night = false
+    private var displayMode = 0  // 0 Day, 1 Sepia, 2 Night
     private var needsReload = false
     private var title0 = "PDF Desk"
 
@@ -77,7 +84,12 @@ class ReaderActivity : AppCompatActivity() {
             title0 = intent.getStringExtra("title") ?: "PDF Desk"
         }
         toolbar.title = title0
+        toolbar.menu.add("Search").setIcon(R.drawable.ic_search)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        toolbar.setOnMenuItemClickListener { searchDialog(); true }
+        tintOverlay = findViewById(R.id.tintOverlay)
         fabTools.setOnClickListener { showToolsSheet() }
+        applyDisplayMode()
 
         load(0)
     }
@@ -102,13 +114,16 @@ class ReaderActivity : AppCompatActivity() {
             .scrollHandle(DefaultScrollHandle(this))
             .onTap { toggleChrome(); false }
             .onPageScroll { _, _ -> setChromeVisible(false) }
-            .nightMode(night)
+            .nightMode(displayMode == 2)
             .onPageChange { p, count ->
                 currentPage = p
                 pageCount = count
                 tvPage.text = "${p + 1} / $count"
             }
-            .onError { toast("Could not render this PDF.") }
+            .onError { t ->
+                if (t is PdfPasswordException) promptPassword(false)
+                else toast("Could not render this PDF.")
+            }
             .load()
         setChromeVisible(true)
         scheduleAutoHide()
@@ -160,9 +175,13 @@ class ReaderActivity : AppCompatActivity() {
         row(R.id.rowPages) { needsReload = true; startActivity(Intent(this, PageManagerActivity::class.java)) }
         row(R.id.rowReadMode) { startActivity(Intent(this, ReaderModeActivity::class.java)) }
         row(R.id.rowGoto) { goToPageDialog() }
+        sheet.findViewById<android.widget.TextView>(R.id.lblNight)?.text =
+            "Display: " + arrayOf("Day", "Sepia", "Night")[displayMode]
         row(R.id.rowNight) {
-            night = !night; load(currentPage)
-            toast(if (night) "Night mode on" else "Night mode off")
+            displayMode = (displayMode + 1) % 3
+            applyDisplayMode()
+            load(currentPage)
+            toast("Display: " + arrayOf("Day", "Sepia", "Night")[displayMode])
         }
         row(R.id.rowMerge) { pickMerge.launch(arrayOf("application/pdf")) }
         row(R.id.rowExport) { exportDoc.launch(sanitizedExportName()) }
@@ -225,6 +244,85 @@ class ReaderActivity : AppCompatActivity() {
         } catch (e: Exception) { toast("Share failed.") }
     }
 
+    private lateinit var tintOverlay: android.view.View
+
+    private fun applyDisplayMode() {
+        when (displayMode) {
+            2 -> {  // Night: inverted pages on a true-dark gutter
+                pdfView.setBackgroundColor(Color.parseColor("#14161A"))
+                tintOverlay.visibility = android.view.View.GONE
+            }
+            1 -> {  // Sepia: warm tint over normal pages, easier on the eyes
+                pdfView.setBackgroundColor(ContextCompat.getColor(this, R.color.canvas))
+                tintOverlay.setBackgroundColor(0x33C58F24)
+                tintOverlay.visibility = android.view.View.VISIBLE
+            }
+            else -> {
+                pdfView.setBackgroundColor(ContextCompat.getColor(this, R.color.canvas))
+                tintOverlay.visibility = android.view.View.GONE
+            }
+        }
+    }
+
+    private fun promptPassword(retry: Boolean) {
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = "Password"
+        }
+        AlertDialog.Builder(this)
+            .setTitle(if (retry) "Incorrect password — try again" else "This PDF is password-protected")
+            .setView(input)
+            .setCancelable(false)
+            .setPositiveButton("Unlock") { _, _ ->
+                val pw = input.text.toString()
+                Thread {
+                    try {
+                        PdfEditor.decrypt(FileUtils.workingFile(this), FileUtils.tempFile(this), pw)
+                        runOnUiThread {
+                            toast("Unlocked.")
+                            needsReload = false
+                            load(currentPage)
+                        }
+                    } catch (e: InvalidPasswordException) {
+                        runOnUiThread { promptPassword(true) }
+                    } catch (e: Exception) {
+                        runOnUiThread { toast("Could not unlock this PDF."); finish() }
+                    }
+                }.start()
+            }
+            .setNegativeButton("Cancel") { _, _ -> finish() }
+            .show()
+    }
+
+    private fun searchDialog() {
+        val input = EditText(this).apply { hint = "Search in document" }
+        AlertDialog.Builder(this)
+            .setTitle("Search")
+            .setView(input)
+            .setPositiveButton("Find") { _, _ ->
+                val q = input.text.toString().trim()
+                if (q.isEmpty()) return@setPositiveButton
+                toast("Searching…")
+                Thread {
+                    val hits = try { PdfEditor.searchText(FileUtils.workingFile(this), q) }
+                               catch (e: Exception) { emptyList() }
+                    runOnUiThread {
+                        if (hits.isEmpty()) { toast("No matches for \"$q\"."); return@runOnUiThread }
+                        val labels = hits.map { (p, n, snip) ->
+                            "Page ${p + 1} (${n}×) — …$snip…"
+                        }.toTypedArray()
+                        AlertDialog.Builder(this)
+                            .setTitle("${hits.sumOf { it.second }} matches on ${hits.size} pages")
+                            .setItems(labels) { _, i -> pdfView.jumpTo(hits[i].first, true) }
+                            .setNegativeButton("Close", null)
+                            .show()
+                    }
+                }.start()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun officeExportDialog() {
         val opts = arrayOf("Word document (.docx)", "Excel workbook (.xlsx)", "PowerPoint (.pptx)")
         AlertDialog.Builder(this)
@@ -247,11 +345,12 @@ class ReaderActivity : AppCompatActivity() {
             var ok = false
             val tmp = File(filesDir, "export_tmp.$kind")
             try {
-                val pages = PdfEditor.extractAllLines(FileUtils.workingFile(this))
+                val runPages = PdfEditor.extractAllLineRuns(FileUtils.workingFile(this))
+                val strPages = runPages.map { pg -> pg.map { ln -> ln.map { it.text } } }
                 when (kind) {
-                    "docx" -> ExportFormats.buildDocx(pages, tmp)
-                    "xlsx" -> ExportFormats.buildXlsx(pages, tmp)
-                    "pptx" -> ExportFormats.buildPptx(pages, tmp)
+                    "docx" -> ExportFormats.buildDocx(runPages, tmp)
+                    "xlsx" -> ExportFormats.buildXlsx(strPages, tmp)
+                    "pptx" -> ExportFormats.buildPptx(strPages, tmp)
                 }
                 ok = FileUtils.copyFileToUri(this, tmp, uri)
             } catch (e: Exception) { ok = false }

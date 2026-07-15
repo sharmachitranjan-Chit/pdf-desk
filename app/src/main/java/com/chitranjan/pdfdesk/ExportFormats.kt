@@ -33,15 +33,60 @@ object ExportFormats {
 
     // ---------------- Word ----------------
 
-    fun buildDocx(pages: List<List<List<String>>>, out: File) {
+    /**
+     * Formatting carried from the PDF: per-line font size (half-points),
+     * bold for lines clearly larger than the page's body text, and pages
+     * that read as tables (most lines have 2+ column cells) become real
+     * bordered Word tables.
+     */
+    fun buildDocx(pages: List<List<List<PdfEditor.TextRun>>>, out: File) {
         val body = StringBuilder()
+
+        fun para(text: String, halfPts: Int, bold: Boolean) {
+            val b = if (bold) "<w:b/>" else ""
+            body.append("<w:p><w:r><w:rPr>$b<w:sz w:val=\"$halfPts\"/></w:rPr>" +
+                "<w:t xml:space=\"preserve\">${esc(text)}</w:t></w:r></w:p>")
+        }
+
         pages.forEachIndexed { i, lines ->
-            body.append("<w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Page ${i + 1}</w:t></w:r></w:p>")
+            para("Page ${i + 1}", 28, true)
             if (lines.isEmpty()) {
-                body.append("<w:p><w:r><w:t xml:space=\"preserve\">(no extractable text on this page)</w:t></w:r></w:p>")
-            } else lines.forEach { cells ->
-                val text = cells.joinToString("    ")
-                body.append("<w:p><w:r><w:t xml:space=\"preserve\">${esc(text)}</w:t></w:r></w:p>")
+                para("(no extractable text on this page)", 22, false)
+            } else {
+                val sizes = lines.flatten().map { it.fontSizePt }.sorted()
+                val median = if (sizes.isEmpty()) 11f else sizes[sizes.size / 2]
+                val tableLike = lines.count { it.size >= 2 } * 10 >= lines.size * 4  // >=40%
+
+                if (tableLike) {
+                    val cols = lines.maxOf { it.size }
+                    body.append("<w:tbl><w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/><w:tblBorders>" +
+                        "<w:top w:val=\"single\" w:sz=\"4\" w:color=\"999999\"/>" +
+                        "<w:left w:val=\"single\" w:sz=\"4\" w:color=\"999999\"/>" +
+                        "<w:bottom w:val=\"single\" w:sz=\"4\" w:color=\"999999\"/>" +
+                        "<w:right w:val=\"single\" w:sz=\"4\" w:color=\"999999\"/>" +
+                        "<w:insideH w:val=\"single\" w:sz=\"4\" w:color=\"999999\"/>" +
+                        "<w:insideV w:val=\"single\" w:sz=\"4\" w:color=\"999999\"/>" +
+                        "</w:tblBorders></w:tblPr>")
+                    lines.forEach { cells ->
+                        body.append("<w:tr>")
+                        for (c in 0 until cols) {
+                            val run = cells.getOrNull(c)
+                            val txt = run?.text ?: ""
+                            val hp = (((run?.fontSizePt ?: median) * 2).toInt()).coerceIn(14, 40)
+                            body.append("<w:tc><w:tcPr/><w:p><w:r><w:rPr><w:sz w:val=\"$hp\"/></w:rPr>" +
+                                "<w:t xml:space=\"preserve\">${esc(txt)}</w:t></w:r></w:p></w:tc>")
+                        }
+                        body.append("</w:tr>")
+                    }
+                    body.append("</w:tbl><w:p/>")
+                } else {
+                    lines.forEach { cells ->
+                        val lineSize = cells.maxOf { it.fontSizePt }
+                        val hp = (lineSize * 2).toInt().coerceIn(14, 56)
+                        val bold = lineSize > median * 1.18f
+                        para(cells.joinToString("    ") { it.text }, hp, bold)
+                    }
+                }
             }
             body.append("<w:p/>")
         }

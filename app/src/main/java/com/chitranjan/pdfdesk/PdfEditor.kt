@@ -271,14 +271,26 @@ object PdfEditor {
         PDDocument.load(work).use { doc -> return linesOfRuns(doc, pageIndex).flatten() }
     }
 
-    /** Per-page lines of cell texts (columns split at wide gaps) — for Office export. */
-    fun extractAllLines(work: File): List<List<List<String>>> {
+    /** Per-page lines of runs (columns split at wide gaps) — for Office export. */
+    fun extractAllLineRuns(work: File): List<List<List<TextRun>>> {
         PDDocument.load(work).use { doc ->
             return (0 until doc.numberOfPages).map { p ->
-                try { linesOfRuns(doc, p).map { line -> line.map { it.text } } }
-                catch (e: Exception) { emptyList() }
+                try { linesOfRuns(doc, p) } catch (e: Exception) { emptyList() }
             }
         }
+    }
+
+    /**
+     * Remove encryption from the working copy using the supplied password,
+     * so viewing AND editing work on protected PDFs from then on.
+     * Throws InvalidPasswordException on a wrong password.
+     */
+    fun decrypt(work: File, tmp: File, password: String) {
+        PDDocument.load(work, password).use { doc ->
+            doc.setAllSecurityToBeRemoved(true)
+            doc.save(tmp)
+        }
+        replace(work, tmp)
     }
 
     /** Whole-document plain text, reading order — for reflow reading mode. */
@@ -288,6 +300,33 @@ object PdfEditor {
             s.sortByPosition = true
             return s.getText(doc)
         }
+    }
+
+    /** Case-insensitive keyword search. Returns (pageIndex, hitCount, snippet). */
+    fun searchText(work: File, query: String): List<Triple<Int, Int, String>> {
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) return emptyList()
+        val out = ArrayList<Triple<Int, Int, String>>()
+        PDDocument.load(work).use { doc ->
+            val stripper = PDFTextStripper()
+            stripper.sortByPosition = true
+            for (p in 0 until doc.numberOfPages) {
+                stripper.startPage = p + 1
+                stripper.endPage = p + 1
+                val text = try { stripper.getText(doc) } catch (e: Exception) { "" }
+                val lower = text.lowercase()
+                var idx = lower.indexOf(q)
+                if (idx < 0) continue
+                var count = 0
+                val first = idx
+                while (idx >= 0) { count++; idx = lower.indexOf(q, idx + q.length) }
+                val s = (first - 28).coerceAtLeast(0)
+                val e = (first + q.length + 28).coerceAtMost(text.length)
+                val snippet = text.substring(s, e).replace(Regex("\\s+"), " ").trim()
+                out.add(Triple(p, count, snippet))
+            }
+        }
+        return out
     }
 
     private fun linesOfRuns(doc: PDDocument, pageIndex: Int): List<List<TextRun>> {

@@ -65,6 +65,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        findViewById<android.widget.TextView>(R.id.tvPromo).setOnClickListener {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://moneyclaritytech.com")))
+        }
         refreshRecent()
     }
 

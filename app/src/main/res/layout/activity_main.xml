@@ -182,6 +182,19 @@
             android:clipToPadding="false" />
 
         <TextView
+            android:id="@+id/tvPromo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingTop="10dp"
+            android:paddingBottom="2dp"
+            android:text="For more free tools, visit moneyclaritytech.com"
+            android:textColor="@color/doc_icon"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:background="?android:attr/selectableItemBackground"/>
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="12dp"

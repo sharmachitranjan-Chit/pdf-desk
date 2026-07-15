@@ -39,7 +39,7 @@
     </LinearLayout>
     <LinearLayout android:id="@+id/rowNight" style="@style/SheetRow">
         <ImageView style="@style/SheetIcon" android:src="@drawable/ic_night" android:contentDescription="@null"/>
-        <TextView style="@style/SheetLabel" android:text="Night mode"/>
+        <TextView android:id="@+id/lblNight" style="@style/SheetLabel" android:text="Display: Day"/>
     </LinearLayout>
     <LinearLayout android:id="@+id/rowMerge" style="@style/SheetRow">
         <ImageView style="@style/SheetIcon" android:src="@drawable/ic_merge" android:contentDescription="@null"/>
