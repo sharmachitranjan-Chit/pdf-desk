@@ -1,20 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Graphite & Amber -->
-    <color name="chrome">#1C1E22</color>       <!-- top bars / dark chrome -->
-    <color name="chrome_dark">#141519</color>  <!-- status bar -->
-    <color name="bg">#F4F5F7</color>           <!-- screen background -->
-    <color name="surface">#FFFFFF</color>      <!-- cards / sheets -->
+    <!-- Acrobat-style light UI, amber identity -->
+    <color name="chrome">#FFFFFF</color>       <!-- top bars: now light -->
+    <color name="chrome_dark">#F4F5F7</color>  <!-- secondary chrome -->
+    <color name="bg">#F7F8FA</color>           <!-- screen background -->
+    <color name="surface">#FFFFFF</color>      <!-- cards / sheets / bars -->
     <color name="accent">#E0A62E</color>       <!-- amber primary action -->
     <color name="accent_ink">#1C1E22</color>   <!-- text/icon on amber -->
-    <color name="on_chrome">#F5F6F7</color>    <!-- text/icon on dark chrome -->
-    <color name="text">#1C1E22</color>         <!-- primary text -->
-    <color name="muted">#6B7079</color>        <!-- secondary text -->
-    <color name="divider">#E4E6EA</color>      <!-- hairline dividers -->
-    <color name="doc_badge">#ECEEF1</color>    <!-- file-row icon square -->
-    <color name="doc_icon">#C58F24</color>     <!-- file-row glyph -->
-    <color name="selection">#33E0A62E</color>  <!-- page selection overlay -->
-    <color name="canvas">#2A2E35</color>       <!-- reader/annotate gutter -->
-    <color name="tile_amber">#F6E7C6</color>   <!-- home action tile (primary) -->
-    <color name="tile_neutral">#E9EBEF</color> <!-- home action tile (secondary) -->       <!-- reader/annotate gutter -->
+    <color name="on_chrome">#1C1E22</color>    <!-- text/icon on chrome (now dark-on-light) -->
+    <color name="text">#1C1E22</color>
+    <color name="muted">#6B7079</color>
+    <color name="divider">#E4E6EA</color>
+    <color name="doc_badge">#F6E7C6</color>    <!-- soft amber chip -->
+    <color name="doc_icon">#C58F24</color>
+    <color name="selection">#33E0A62E</color>
+    <color name="canvas">#E7E9ED</color>       <!-- reader gutter: light like Acrobat -->
+    <color name="tile_amber">#F6E7C6</color>
+    <color name="tile_neutral">#ECEEF2</color>
+    <color name="chip">#CC1C1E22</color>       <!-- floating page chip -->
 </resources>

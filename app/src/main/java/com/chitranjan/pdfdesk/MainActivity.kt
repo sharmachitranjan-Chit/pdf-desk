@@ -71,10 +71,22 @@ class MainActivity : AppCompatActivity() {
     private fun refreshRecent() {
         val items = RecentStore.get(this)
         tvEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
-        rv.adapter = RecentAdapter(items, ::loadThumb) { entry ->
-            route = Route.READER
-            openUri(Uri.parse(entry.uri), persist = false, fromRecent = true)
-        }
+        rv.adapter = RecentAdapter(
+            items, ::loadThumb,
+            onClick = { entry ->
+                route = Route.READER
+                openUri(Uri.parse(entry.uri), persist = false, fromRecent = true)
+            },
+            onMore = { entry, anchor ->
+                val pop = android.widget.PopupMenu(this, anchor)
+                pop.menu.add(0, 1, 0, "Remove from recents")
+                pop.setOnMenuItemClickListener {
+                    if (it.itemId == 1) { RecentStore.remove(this, entry.uri); refreshRecent() }
+                    true
+                }
+                pop.show()
+            }
+        )
     }
 
     private fun openUri(uri: Uri, persist: Boolean, fromRecent: Boolean = false) {
@@ -168,13 +180,15 @@ class MainActivity : AppCompatActivity() {
 private class RecentAdapter(
     val items: List<RecentEntry>,
     val thumbLoader: (RecentEntry, ImageView) -> Unit,
-    val onClick: (RecentEntry) -> Unit
+    val onClick: (RecentEntry) -> Unit,
+    val onMore: (RecentEntry, View) -> Unit
 ) : RecyclerView.Adapter<RecentAdapter.VH>() {
 
     class VH(v: View) : RecyclerView.ViewHolder(v) {
         val thumb: ImageView = v.findViewById(R.id.imgThumb)
         val name: TextView = v.findViewById(R.id.tvName)
         val meta: TextView = v.findViewById(R.id.tvMeta)
+        val more: View = v.findViewById(R.id.btnMore)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -188,6 +202,7 @@ private class RecentAdapter(
         holder.meta.text = buildMeta(e)
         thumbLoader(e, holder.thumb)
         holder.itemView.setOnClickListener { onClick(e) }
+        holder.more.setOnClickListener { onMore(e, it) }
     }
 
     private fun buildMeta(e: RecentEntry): String {

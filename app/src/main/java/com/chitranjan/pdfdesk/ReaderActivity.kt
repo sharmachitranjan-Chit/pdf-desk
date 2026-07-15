@@ -3,8 +3,6 @@ package com.chitranjan.pdfdesk
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -14,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import com.github.barteksc.pdfviewer.PDFView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.io.File
 
 class ReaderActivity : AppCompatActivity() {
@@ -58,7 +57,7 @@ class ReaderActivity : AppCompatActivity() {
             title0 = intent.getStringExtra("title") ?: "PDF Desk"
         }
         toolbar.title = title0
-        buildMenu(toolbar)
+        findViewById<android.view.View>(R.id.fabTools).setOnClickListener { showToolsSheet() }
 
         load(0)
     }
@@ -87,39 +86,32 @@ class ReaderActivity : AppCompatActivity() {
             .load()
     }
 
-    private fun buildMenu(toolbar: MaterialToolbar) {
-        val m: Menu = toolbar.menu
-        m.clear()
-        m.add(0, 1, 0, "Pages")
-        m.add(0, 2, 1, "Annotate this page")
-        m.add(0, 8, 2, "Edit text on this page")
-        m.add(0, 3, 3, "Go to page")
-        m.add(0, 4, 4, "Night mode")
-        m.add(0, 5, 5, "Merge another PDF")
-        m.add(0, 6, 6, "Save / Export")
-        m.add(0, 7, 7, "Share")
-        toolbar.setOnMenuItemClickListener { onMenu(it) }
-    }
-
-    private fun onMenu(item: MenuItem): Boolean {
-        when (item.itemId) {
-            1 -> { needsReload = true; startActivity(Intent(this, PageManagerActivity::class.java)) }
-            2 -> {
-                needsReload = true
-                startActivity(Intent(this, AnnotateActivity::class.java).putExtra("page", currentPage))
+    private fun showToolsSheet() {
+        val sheet = BottomSheetDialog(this)
+        sheet.setContentView(R.layout.sheet_tools)
+        fun row(id: Int, action: () -> Unit) {
+            sheet.findViewById<android.view.View>(id)?.setOnClickListener {
+                sheet.dismiss(); action()
             }
-            8 -> {
-                needsReload = true
-                startActivity(Intent(this, TextEditActivity::class.java).putExtra("page", currentPage))
-            }
-            3 -> goToPageDialog()
-            4 -> { night = !night; load(currentPage); toast(if (night) "Night mode on" else "Night mode off") }
-            5 -> pickMerge.launch(arrayOf("application/pdf"))
-            6 -> exportDoc.launch(sanitizedExportName())
-            7 -> share()
-            else -> return false
         }
-        return true
+        row(R.id.rowEdit) {
+            needsReload = true
+            startActivity(Intent(this, TextEditActivity::class.java).putExtra("page", currentPage))
+        }
+        row(R.id.rowAnnotate) {
+            needsReload = true
+            startActivity(Intent(this, AnnotateActivity::class.java).putExtra("page", currentPage))
+        }
+        row(R.id.rowPages) { needsReload = true; startActivity(Intent(this, PageManagerActivity::class.java)) }
+        row(R.id.rowGoto) { goToPageDialog() }
+        row(R.id.rowNight) {
+            night = !night; load(currentPage)
+            toast(if (night) "Night mode on" else "Night mode off")
+        }
+        row(R.id.rowMerge) { pickMerge.launch(arrayOf("application/pdf")) }
+        row(R.id.rowExport) { exportDoc.launch(sanitizedExportName()) }
+        row(R.id.rowShare) { share() }
+        sheet.show()
     }
 
     private fun goToPageDialog() {

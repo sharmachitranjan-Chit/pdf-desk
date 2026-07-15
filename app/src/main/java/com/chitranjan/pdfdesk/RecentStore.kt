@@ -28,6 +28,12 @@ object RecentStore {
         }
     }
 
+    fun remove(ctx: Context, uri: String) {
+        val kept = get(ctx).filter { it.uri != uri }
+        val raw = kept.joinToString(ROW) { "${it.uri}$SEP${it.name}$SEP${it.time}$SEP${it.size}" }
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString(KEY, raw).apply()
+    }
+
     fun add(ctx: Context, uri: String, name: String, size: Long = 0L) {
         val current = get(ctx).filter { it.uri != uri }.toMutableList()
         current.add(0, RecentEntry(uri, name, System.currentTimeMillis(), size))
